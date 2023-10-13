@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include<math.h>
 #include <omp.h>
-
+#include <stdlib.h>
 /* Function for integration */
 double f(double x){
   return x*x*x;
@@ -9,55 +9,43 @@ double f(double x){
     // return pow(3.0,x);
 }
 
-double simpsons(double f(double x),double a,double b,int n){
-  double h,integral,x,sum=0;
-  h=fabs(b-a)/n;
-  for(int i=1;i<n;i++){
-    x=a+i*h;
-    if(i%2==0){
-      sum=sum+2*f(x);
-    }
-    else{
-      sum=sum+4*f(x);
-    }
-  }
-  integral=(h/3)*(f(a)+f(b)+sum);
-  return integral;
-}
 
-double simpson13(double f(double x),double a,double b, double h, int n){
+double simpson13(double *f,double a,double b, double h, int n){
   printf( "\n***Simpson 1/3 Calculation\n");
   double  sum =0.0;
-  omp_set_num_threads(4);
   #pragma omp parallel for reduction(+:sum) 
   for(int i=1;i<n;i++){
       double x=a+i*h;
-      if(i%2==0) sum=sum+2*f(x);
-      else sum=sum+4*f(x);
+      if(i%2==0) sum=sum+2*f[i];
+      else sum=sum+4*f[i];
       int id = omp_get_thread_num();
-      printf("Thread  %d ----- i %d and x %f \n", id,i,x);
-      printf("Number of threads After: %d\n", omp_get_num_threads());
+      printf("Thread(1/3)  %d ----- i %d and x %f \n", id,i,x);
   }
   printf("Number of interval 1/3 : %d \n" ,n);
   printf ("From X   %f to %f\n", a,a+n*h);
-  double result = (h/3)*(f(a)+f(a+n*h)+sum);
+  double result = (h/3)*(f[0]+f[n]+sum);
   printf("Result 1/3 : %f \n " ,result);
   return result ;
-
 }
 
-double simpson38(double f(double x),double a,double b, double h, int n){
+double simpson38(double *f,double a,double b, double h, int n){
   printf("\n***Simpson 3/8 Calculation\n");
   printf("Number of interval 3/8 : %d \n" ,3);
   printf ("From X %f to %f\n", b-3*h,b);
-  double result = 3*h/8 *( f(b) + 3*f(b-h) + 3*f(b-2*h) + f(b-3*h) );
+  double result = 3*h/8 *( f[n] + 3*f[n-1] + 3*f[n-2] + f[n-3] );
   printf("Result 3/8 : %f \n" ,result);
+  printf("Thread(3/8)  %d  \n", omp_get_thread_num());
+  
   return result ;
+}
+
+double trap(double *f, double h){
+  return h * (f[0] + f[1]) / 2;
 }
 
 int main(){
     int n_interval;
-    double a,b,h,integral,integral_new,integral2;
+    double a,b,h,integral=0.0,integral2=0.0;
     printf("\n***********************************");
     /*Ask the user for necessary input */
     printf("\nEnter the initial limit: ");
@@ -67,23 +55,34 @@ int main(){
     printf("\nEnter the number of intervals: ");
     scanf("%d",&n_interval);
     printf("\n***********************************");
-    integral_new=simpsons(f,a,b,n_interval);
-    printf("\nIntegral (series) %f \n", integral_new);
+ 
 
     h=fabs(b-a)/n_interval ;
-    printf("\nh is : %f \n", h);
+    double *F ;
+    int size = (n_interval+1);
+    F=(double*)malloc( size* sizeof(double));
+    printf("\n Data :\n");
+    printf("\n[ ");
+    for (int i=0; i<size ; i++) {
+      F[i] = f(a+i*h);
+      printf("%f ",F[i]);
+    }
+    printf("]\n");
 
-    if (n_interval%2 == 0) integral = simpson13(f,a,b,h,n_interval);
+    printf("\nh is : %f \n", h);
+    if (n_interval==0) printf("\n Interval cannot be zero :\n");
+    else if(n_interval==1) integral = trap(F,h);
+    else if (n_interval%2 == 0) integral = simpson13(F,a,b,h,n_interval);
     else {
+      omp_set_nested(1);
       #pragma omp parallel
       {
         #pragma omp  single
         {
-          printf("Number of threads Before main : %d\n", omp_get_num_threads());
           #pragma omp task firstprivate(a,b,h,n_interval)
-          integral2 = simpson13(f,a,b,h,n_interval-3);
+          integral = simpson38(F,a,b,h,n_interval);
           #pragma omp task firstprivate(a,b,h,n_interval)
-          integral = simpson38(f,a,b,h,n_interval);
+          integral2 = simpson13(F,a,b,h,n_interval-3);
           #pragma omp taskwait
         }
       }
@@ -92,5 +91,6 @@ int main(){
     printf("\n\n***Integral (Parallel) %f \n", integral + integral2);
     printf("--------------- END--------------------\n");
 
+    free(F);
     return(0);
 }

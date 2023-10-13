@@ -37,12 +37,13 @@ double simpson38(double *f,double a,double b, double h, int n){
   return result ;
 }
 
-double trap(double a,double b, double h){
-  return h * (f(a) + f(b)) / 2;
+double trap(double *f, double h){
+  return h * (f[0] + f[1]) / 2;
 }
+
 int main(){
     int n_interval;
-    double a,b,h,sum=0.0,integral,integral_new;
+    double a,b,h,integral=0.0;
     printf("\n***********************************");
     /*Ask the user for necessary input */
     printf("\nEnter the initial limit: ");
@@ -58,13 +59,17 @@ int main(){
     double *F ;
     int size = (n_interval+1);
     F=(double*)malloc( size* sizeof(double));
-
-
-    for (int i=0; i<size ; i++) F[i] = f(a+i*h);
-    // for (int i=0; i<size ; i++) printf("Element %f: %f\n", a+i*h, F[i]);
-
+    printf("\n Data :\n");
+    printf("\n[ ");
+    for (int i=0; i<size ; i++) {
+      F[i] = f(a+i*h);
+      printf("%f ",F[i]);
+    }
+    printf("]\n");
+    
     printf("\nh is : %f \n", h);
-    if(n_interval <=1) integral = trap(a,b,h);
+    if (n_interval==0) printf("\n Interval cannot be zero :\n");
+    else if(n_interval==1) integral = trap(F,h);
     else if (n_interval%2 == 0) integral = simpson13(F,a,b,h,n_interval);
     else {
       integral = simpson38(F,a,b,h,n_interval);
