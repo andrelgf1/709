@@ -25,7 +25,6 @@ int main()
     cl_int errNum;
     cl_uint numPlatforms;
     cl_platform_id platformIds[MAXNUMDEV];
-    cl_device_id devID[MAXNUMDEV];
     cl_uint numDev;
     
     // Get a reference to an object representing number of plataforms 
@@ -52,8 +51,8 @@ int main()
         }
         cout << "  Name: " << platName << endl<< endl;
 
-
-        // Get the device IDs matching the CL_DEVICE_TYPE parameter, up to the MAXNUMDEV limit
+        // Get the number of device and device IDs matching the CL_DEVICE_TYPE parameter, up to the MAXNUMDEV limit
+        cl_device_id devID[MAXNUMDEV];
         errNum = clGetDeviceIDs( platformIds[plat],CL_DEVICE_TYPE_ALL, MAXNUMDEV, devID, &numDev);
         if (errNum != CL_SUCCESS || numDev <= 0)
         {
@@ -61,6 +60,7 @@ int main()
             return 2;
         }
         cout << "       Number of OpenCL ' "<< platName<< " ' devices: " << numDev << endl << endl;
+
         // Go thru the number of devices in each plataform .
         for (cl_uint dev = 0; dev < numDev; ++dev){
 
